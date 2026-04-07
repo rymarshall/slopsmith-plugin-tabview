@@ -44,6 +44,23 @@ function _tvCreateContainer() {
     inner.id = 'tabview-at';
     c.appendChild(inner);
 
+    // Yellow highlight overlay
+    const hl = document.createElement('div');
+    hl.id = 'tabview-highlight';
+    hl.style.cssText = [
+        'position:absolute',
+        'width:24px',
+        'height:24px',
+        'background:rgba(255,235,59,0.35)',
+        'border:2px solid rgba(250,204,21,0.95)',
+        'border-radius:4px',
+        'box-shadow:0 0 0 1px rgba(250,204,21,0.35),0 0 10px rgba(250,204,21,0.35)',
+        'pointer-events:none',
+        'z-index:999',
+        'display:none',
+    ].join(';');
+    c.appendChild(hl);
+
     // Loading overlay
     const ov = document.createElement('div');
     ov.id = 'tabview-loading';
@@ -149,6 +166,8 @@ function _tvStartSync() {
     if (_tvSyncRAF) return;
     var lastTick = -1;
     var audio = document.getElementById('audio');
+    var hl = document.getElementById('tabview-highlight');
+    if (hl) hl.style.display = '';
 
     function loop() {
         _tvSyncRAF = requestAnimationFrame(loop);
@@ -159,6 +178,8 @@ function _tvStartSync() {
             lastTick = tick;
             try { _tvApi.tickPosition = tick; } catch (_) {}
         }
+
+        _tvUpdateHighlight();
     }
     loop();
 }
@@ -167,6 +188,71 @@ function _tvStopSync() {
     if (_tvSyncRAF) {
         cancelAnimationFrame(_tvSyncRAF);
         _tvSyncRAF = null;
+    }
+    var hl = document.getElementById('tabview-highlight');
+    if (hl) hl.style.display = 'none';
+}
+
+// ── Yellow highlight bar ────────────────────────────────────────────────
+
+function _tvFindCursorRect() {
+    var host = document.getElementById('tabview-at');
+    if (!host) return null;
+    var selectors = ['.at-cursor-beat', '.at-cursor-bar', '.at-cursor', '[class*="cursor"]'];
+    var roots = [host];
+    if (host.shadowRoot) roots.push(host.shadowRoot);
+    for (var r = 0; r < roots.length; r++) {
+        for (var s = 0; s < selectors.length; s++) {
+            var nodes = roots[r].querySelectorAll(selectors[s]);
+            for (var n = 0; n < nodes.length; n++) {
+                var rect = nodes[n].getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) return rect;
+            }
+        }
+    }
+    return null;
+}
+
+function _tvUpdateHighlight() {
+    var hl = document.getElementById('tabview-highlight');
+    if (!hl || !_tvContainer) return;
+
+    var cursorRect = _tvFindCursorRect();
+    if (!cursorRect) { hl.style.display = 'none'; return; }
+
+    var wrapRect = _tvContainer.getBoundingClientRect();
+    var size = Math.max(18, Math.min(36, Math.round(Math.max(cursorRect.width, cursorRect.height, 20))));
+    var x = cursorRect.left - wrapRect.left + _tvContainer.scrollLeft + (cursorRect.width - size) / 2;
+    var y = cursorRect.top - wrapRect.top + _tvContainer.scrollTop + (cursorRect.height - size) / 2;
+
+    hl.style.left = Math.round(x) + 'px';
+    hl.style.top = Math.round(y) + 'px';
+    hl.style.width = size + 'px';
+    hl.style.height = size + 'px';
+    hl.style.display = '';
+
+    // Auto-scroll to keep cursor visible
+    var paddingX = Math.min(180, wrapRect.width * 0.3);
+    var paddingY = Math.min(100, wrapRect.height * 0.25);
+
+    var relX = cursorRect.left - wrapRect.left;
+    var relY = cursorRect.top - wrapRect.top;
+
+    var needScroll = false;
+    var targetX = _tvContainer.scrollLeft;
+    var targetY = _tvContainer.scrollTop;
+
+    if (relX < paddingX || relX > wrapRect.width - paddingX) {
+        targetX = x - wrapRect.width / 2;
+        needScroll = true;
+    }
+    if (relY < paddingY || relY > wrapRect.height - paddingY) {
+        targetY = y - wrapRect.height / 2;
+        needScroll = true;
+    }
+
+    if (needScroll) {
+        _tvContainer.scrollTo({ left: targetX, top: targetY, behavior: 'auto' });
     }
 }
 
