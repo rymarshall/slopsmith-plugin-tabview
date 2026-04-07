@@ -7,6 +7,7 @@ let _tvSyncRAF = null;
 let _tvCurrentFile = null;
 let _tvCurrentArr = null;
 let _tvReady = false;
+let _tvFilename = null; // captured from playSong hook
 
 // ── alphaTab CDN loader ─────────────────────────────────────────────────
 
@@ -195,7 +196,7 @@ async function _tvToggle() {
         await _tvLoadScript();
 
         // Fetch GP5
-        var filename = window.currentFilename;
+        var filename = _tvFilename;
         var arrSel = document.getElementById('arr-select');
         var arrIdx = arrSel ? arrSel.value : 0;
         var url = '/api/plugins/tabview/gp5/' + encodeURIComponent(filename) + '?arrangement=' + arrIdx;
@@ -275,6 +276,7 @@ function _tvReset() {
     // Hook playSong
     var origPlay = window.playSong;
     window.playSong = async function (filename, arrangement) {
+        _tvFilename = filename;
         _tvReset();
         await origPlay(filename, arrangement);
         _tvInjectButton();
