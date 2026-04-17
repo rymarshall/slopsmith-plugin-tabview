@@ -77,7 +77,7 @@ function _tvCreateContainer() {
 function _tvSizeContainer() {
     if (!_tvContainer) return;
     const canvas = document.getElementById('highway');
-    if (canvas) _tvContainer.style.height = canvas.height + 'px';
+    if (canvas) { _tvContainer.style.top = '60px'; _tvContainer.style.height = (canvas.getBoundingClientRect().height - 60) + 'px'; }
 }
 
 // ── alphaTab init ───────────────────────────────────────────────────────
